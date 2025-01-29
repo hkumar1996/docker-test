@@ -1,0 +1,37 @@
+pipeline {
+    environment {
+       AWS_ACCOUNT_ID = '752140524248'
+       AWS_DEFAULT_REGION = 'ap-southeast-2'
+       IMAGE_REPO_NAME = 'myapp'
+       REPOSITORY = '${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/${IMAGE_REPO_NAME}'
+       dockerhost = '10.1.1.219'
+           }
+       
+    agent any 
+    stages {
+        stage('Cloning out Git repo') { 
+            steps {
+                git credentialsId: 'GitHub-id', url: 'https://github.com/vinaykumar331/dockertest1.git'
+            }
+        }
+        stage('Buildig our Image') { 
+            steps {
+                sh "docker build . -t $REPOSITORY:v$BUILD_NUMBER"
+            }
+        }
+        stage('Login & push Image to ECR then clean up locally') { 
+            steps {
+                script {
+                sh "aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com"
+                sh "docker push $REPOSITORY:v$BUILD_NUMBER"
+                sh "docker rmi $REPOSITORY:v$BUILD_NUMBER" 
+                }
+              }
+            }
+         stage('Deploy cointainer') { 
+            steps {
+                sh "docker run --rm -dit --name mycon4 -p 8500:80 $REPOSITORY:v$BUILD_NUMBER"
+            }
+        }
+   }       
+}

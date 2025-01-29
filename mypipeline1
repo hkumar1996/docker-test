@@ -1,0 +1,40 @@
+pipeline {
+    environment {
+        registry = 'vinaykumar331/myrepo'
+        dockerhost = '10.1.1.213' 
+    }
+    agent any
+    stages {
+        stage('Cloning our Git') {
+            steps {
+                git credentialsId: 'GitHUB-Id', url: 'https://github.com/vinaykumar331/dockertest1.git'
+            }
+        }
+        stage('Building our image') {
+            steps {
+                script {
+                    sh "docker build . -t $registry:vk$BUILD_NUMBER"
+                }
+            }
+        }
+          stage('Push Image To DockerHUB') {
+               steps{
+                     withCredentials([string(credentialsId: 'DockerHUB-ID', variable: 'DockerHub_Credentials')]) {
+                     sh "docker login -u vinaykumar331 -p ${DockerHub_Credentials}"
+                     sh "docker push vinaykumar331/myrepo:vk$BUILD_NUMBER"
+                 }
+            }    
+        }
+        
+        stage('Cleaning up') {
+            steps {
+                sh "docker rmi $registry:vk$BUILD_NUMBER"
+            }
+        }
+        stage('Deploying to Docker') {
+            steps {
+                sh "docker run -dit --name testing3 -p 8170:80 $registry:v$BUILD_NUMBER"
+            }
+        }
+       }
+   }
