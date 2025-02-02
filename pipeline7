@@ -1,0 +1,33 @@
+pipeline {
+    environment {
+      registry = 'hkumar17/app'
+    }
+    agent any
+    stages {
+        stage('Clone GitHUb Repo') {
+            steps {
+                git branch: 'main', credentialsId: 'GitHub-id', url: 'https://github.com/hkumar1996/docker-test.git'
+            }
+        }
+        stage('Building Docker image') {
+            steps {
+                sh 'docker build . -t $registry:v$BUILD_NUMBER'
+            }
+        }
+        stage('Push Image to DockerHUb & Clean up Locally') {
+            steps {
+                 withCredentials([string(credentialsId: 'hkumar17', variable: 'DockerHub')]) {
+                sh "docker login -u hkumar17 -p ${DockerHub}"
+                sh "docker push $registry:v$BUILD_NUMBER"
+                sh "docker rmi $registry:v$BUILD_NUMBER"
+             }
+            }
+           }
+           stage('Creating container') {
+            steps {
+                sh 'docker run --rm -dit --name c1 -p 8100:80 $registry:v$BUILD_NUMBER'
+            }
+        }  
+    }
+    
+}
